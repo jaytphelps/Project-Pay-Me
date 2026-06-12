@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.env
+.zshrct
+.DS_Store
+logs/
+db/
+*.db
+*.db-shm
+*.db-wal
+data/raw/
