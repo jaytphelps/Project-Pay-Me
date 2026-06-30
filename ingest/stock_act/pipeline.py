@@ -27,15 +27,23 @@ def fetch_stock_act(year, limit=None):
 
     total_docs = 0
     total_records = 0
+    skipped_watermark = 0
+    skipped_no_records = 0
+    skipped_needs_ocr = 0
     last_ts = None
 
-    index_path = download_index(year)
-    docs = read_ptr_docids(index_path)
+    try:
+        index_path = download_index(year)
+        docs = read_ptr_docids(index_path)
+    except Exception as e:
+        log(msg.ingestion_failed("stock_act", e), "ERROR")
+        raise
 
     for doc in docs:
         filing_date = parse_datetime(doc.get("filing_date"))
 
         if watermark and filing_date and filing_date <= watermark:
+            skipped_watermark += 1
             continue
 
         try:
@@ -60,9 +68,12 @@ def fetch_stock_act(year, limit=None):
                 diagnostics=diagnostics,
             )
             if not records:
+                skipped_no_records += 1
+                if diagnostics.get("needs_ocr"):
+                    skipped_needs_ocr += 1
                 log(
                     "No records parsed "
-                    f"doc_url= {STOCK_ACT_PTR_BASE}/{doc['year']}/{doc['doc_id']}.pdf"
+                    f"doc_url={STOCK_ACT_PTR_BASE}/{doc['year']}/{doc['doc_id']}.pdf "
                     f"doc_id={doc['doc_id']} "
                     f"pages={diagnostics.get('pages')} "
                     f"tables={diagnostics.get('tables')} "
@@ -121,6 +132,23 @@ def fetch_stock_act(year, limit=None):
         set_watermark(source, last_ts)
         log(msg.watermark_saved(source, value=last_ts, field="filing_date"))
 
-    log(msg.ingestion_finished("stock_act", year=year, docs=total_docs, records=total_records))
+    if skipped_needs_ocr:
+        log(
+            "STOCK Act skipped scanned PDFs that need OCR "
+            f"count={skipped_needs_ocr} year={year}",
+            "WARNING",
+        )
+
+    log(
+        msg.ingestion_finished(
+            "stock_act",
+            year=year,
+            docs=total_docs,
+            records=total_records,
+            skipped_watermark=skipped_watermark,
+            skipped_no_records=skipped_no_records,
+            skipped_needs_ocr=skipped_needs_ocr,
+        )
+    )
 
     return total_records
