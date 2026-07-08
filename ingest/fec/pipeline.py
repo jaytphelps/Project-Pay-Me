@@ -180,6 +180,7 @@ def stream_fec_file(url, source_key, cycle, max_records=100_000):
 def fetch_fec(year=2025):
     cycle          = year if year % 2 == 0 else year + 1
     cycle          = int(str(cycle)[-2:])
+    total_records = 0
 
     log(msg.ingestion_started("fec", year=year, cycle=cycle))
 
@@ -193,6 +194,7 @@ def fetch_fec(year=2025):
                 f"{FEC_API_URL}/{2000 + cycle}/{source_key}{cycle}.zip",
                 source_key, cycle
             )
+            total_records += total
             log(f"Done {source_key}: {total} records")
             if last_ts:
                 set_watermark(watermark_key, last_ts)
@@ -201,3 +203,6 @@ def fetch_fec(year=2025):
     except Exception as e:
         log(msg.ingestion_failed("fec", e), "ERROR")
         raise
+
+    log(msg.ingestion_finished("fec", year=year, cycle=cycle, total=total_records))
+    return total_records

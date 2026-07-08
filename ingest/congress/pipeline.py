@@ -55,6 +55,7 @@ def fetch_congress(congress):
 
         if total == 0:
             log(msg.artifact_skipped(f"congress_{congress}", reason="up_to_date"))
+            log(msg.ingestion_finished("congress", congress=congress, total=total))
             return 0
 
         filename, path, file_hash = save_page(
@@ -64,6 +65,7 @@ def fetch_congress(congress):
         )
         if file_loaded(filename, file_hash):
             log(msg.artifact_skipped(filename))
+            log(msg.ingestion_finished("congress", congress=congress, total=total))
             return 0
 
         register_file(filename, len(all_records), file_hash)

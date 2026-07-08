@@ -19,6 +19,8 @@ def artifact_loaded(filename, **fields):
 
 
 def watermark_current(source, value=None, **fields):
+    if value is None:
+        value = "None"
     return _event("watermark_current", source=source, value=value, **fields)
 
 
